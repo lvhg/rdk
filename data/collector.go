@@ -214,10 +214,19 @@ func (c *collector) tickerBasedCapture(started chan struct{}) {
 	}
 }
 
+var iterator = 0
+
+// not the real method, this one is just for testing
 func (c *collector) getAndPushNextReading() {
-	timeRequested := timestamppb.New(c.clock.Now().UTC())
+	temp := 24 * time.Duration(iterator) * time.Hour
+	timeRequested := timestamppb.New(c.clock.Now().Add(temp).UTC())
 	reading, err := c.captureFunc(c.cancelCtx, c.params)
-	timeReceived := timestamppb.New(c.clock.Now().UTC())
+	timeReceived := timestamppb.New(c.clock.Now().Add(temp).UTC())
+
+	//c.logger.CInfof(c.cancelCtx, "iterator value: %s", iterator)
+	//c.logger.CInfof(c.cancelCtx, "original time: %s", c.clock.Now())
+	//c.logger.CInfof(c.cancelCtx, "adjusted time: %s", timeReceived.AsTime())
+
 	if err != nil {
 		if errors.Is(err, ErrNoCaptureToStore) {
 			c.logger.Debug("capture filtered out by modular resource")
@@ -271,6 +280,8 @@ func (c *collector) getAndPushNextReading() {
 			},
 		}
 	}
+	iterator++
+	//c.logger.CInfof(c.cancelCtx, "adjusted time: %s", msg.Metadata.TimeReceived.AsTime())
 
 	select {
 	// If c.captureResults is full, c.captureResults <- a can block indefinitely. This additional select block allows cancel to
