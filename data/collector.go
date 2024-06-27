@@ -237,6 +237,7 @@ func (c *collector) getAndPushNextReading() {
 	}
 
 	var msg v1.SensorData
+
 	switch v := reading.(type) {
 	case []byte:
 		msg = v1.SensorData{
@@ -252,6 +253,7 @@ func (c *collector) getAndPushNextReading() {
 		// If it's not bytes, it's a struct.
 		var pbReading *structpb.Struct
 		var err error
+		print(pbReading)
 
 		if reflect.TypeOf(reading) == reflect.TypeOf(pb.GetReadingsResponse{}) {
 			// We special-case the GetReadingsResponse because it already contains
@@ -270,16 +272,24 @@ func (c *collector) getAndPushNextReading() {
 			}
 		}
 
+		var m map[string]interface{}
+		m = make(map[string]interface{})
+		var i interface{}
+		i = timeReceived.GetSeconds()
+		m["date"] = i
+		datestruct, err := structpb.NewStruct(m)
+
 		msg = v1.SensorData{
 			Metadata: &v1.SensorMetadata{
 				TimeRequested: timeRequested,
 				TimeReceived:  timeReceived,
 			},
 			Data: &v1.SensorData_Struct{
-				Struct: pbReading,
+				Struct: datestruct,
 			},
 		}
 	}
+	c.logger.CInfof(c.cancelCtx, "date struct: %s", msg.Data)
 	iterator++
 	//c.logger.CInfof(c.cancelCtx, "adjusted time: %s", msg.Metadata.TimeReceived.AsTime())
 
